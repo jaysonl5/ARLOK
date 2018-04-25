@@ -1,0 +1,665 @@
+<?php
+
+use Drupal\paragraphs\Entity\Paragraph;
+use Drupal\Core\Url;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\file\Entity;
+use Drupal\Core\Block\BlockPluginInterface;
+
+//define('ARL_WEBFORM_REQUEST_QUOTE', 2);
+//define('ARL_SUBMIT_SAMPLE', 'http://www.arlokapps.com');
+//define('ARL_CAREERS', 54);
+//define('ARL_STAFF', 10);
+//define('ARL_LABORATORY_SERVICES', 4);
+//define('ARL_INDUSTRIES_SERVICES', 69);
+//define('ARL_ABOUT_US_MENU_PAGE', 70);
+//define('ARL_RESOURCES_MENU_PAGE', 71);
+//define('ARL_LIVE_INDUSTRIES_SERVICES', 72);
+//define('ARL_LIVE_RESOURCES_MENU_PAGE', 73);
+//define('ARL_LIVE_ABOUT_US_MENU_PAGE', 74);
+//define('ARL_NEWS_NID', 43);
+
+/**
+ * @file
+ * Functions to support theming in the arl theme.
+ */
+
+
+/**
+ * Implements hook_preprocess().
+ */
+function arl_preprocess(array &$variables, $hook) {
+  if (!empty($variables['directory'])) {
+    $variables['theme_path'] = base_path() . $variables['directory'];
+  }
+
+  $variables['ARL_WEBFORM_REQUEST_QUOTE'] = 25;
+  $variables['ARL_SUBMIT_SAMPLE'] = \Drupal::config('arl_custom.settings')->get('arl_cust_header_set_login_url');
+  $variables['ARL_CONFIG'] = \Drupal::config('arl_custom.settings')->get();
+
+  $variables['ARL_NEWS_NID'] = 13;
+  $variables['ARL_STAFF'] = 32;
+
+  $variables['ARL_LABORATORY_SERVICES'] = 37;
+  $variables['ARL_INDUSTRIES_SERVICES'] = 38;
+  $variables['ARL_RESOURCES_MENU_PAGE'] = 40;
+  $variables['ARL_ABOUT_US_MENU_PAGE'] = 41;
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for html.html.twig.
+ */
+function arl_preprocess_html(array &$variables) {
+  /* Add class to html tag */
+  //$variables['html_attributes']->addClass('no-js');
+
+  // Don't display the site name twice on the front page (and potentially others)
+  /*if (isset($variables['head_title_array']['title']) && isset($variables['head_title_array']['name']) && ($variables['head_title_array']['title'] == $variables['head_title_array']['name'])) {
+    $variables['head_title'] = $variables['head_title_array']['name'];
+  }*/
+}
+
+/**
+ * Implements hook_page_attachments_alter().
+ */
+function arl_page_attachments_alter(array &$page) {
+  // Tell IE to use latest rendering engine (not to use compatibility mode).
+  /*$ie_edge = [
+    '#type' => 'html_tag',
+    '#tag' => 'meta',
+    '#attributes' => [
+    'http-equiv' => 'X-UA-Compatible',
+    'content' => 'IE=edge',
+    ],
+  ];
+  $page['#attached']['html_head'][] = [$ie_edge, 'ie_edge'];*/
+}
+
+/**
+ * Implements hook_preprocess_page() for page.html.twig.
+ */
+function arl_preprocess_page(array &$variables) {
+  $variables['logopath'] = theme_get_setting('logo.url');
+
+  $config = \Drupal::config('arl_custom.settings');
+
+  $variables['client_login_button'] = [
+    '#type' => 'link',
+    '#title' => t($config->get('arl_cust_header_set_login_btn_text')),
+    '#url' => Url::fromUri($config->get('arl_cust_header_set_login_url')),
+    '#attributes' => [
+      'class' => 'status btn',
+      'target' => '_blank'
+    ]
+  ];
+
+  $node = NULL;
+  if (isset($variables['node'])) {
+    /* @var \Drupal\node\Entity\Node $node */
+    $node = $variables['node'];
+  }
+  else {
+//    $node = menu_get_object('webform_menu');
+  }
+
+  $variables['show_breadcrumbs'] = FALSE;
+  $variables['wrap_class'] = 'content-wrapper';
+  $variables['title_top'] = TRUE;
+  $variables['title'] = $node ? $node->label() : '';
+  $variables['content_wrapper_class'] = array();
+  $variables['content_wrapper_class'][] = 'content-wrapper';
+
+  $top_fields = array(
+    'field_common_subtitle',
+    'field_top_image',
+  );
+
+  if (!empty($node)) {
+    switch ($node->getType()) {
+      case 'service':
+        $top_fields[] = 'field_service_icon';
+        $top_fields[] = 'field_service_show_icon';
+        $variables['show_breadcrumbs'] = TRUE;
+        break;
+      case 'page':
+        switch ($node->id()) {
+          case $variables['ARL_NEWS_NID']:
+          case $variables['ARL_LABORATORY_SERVICES']:
+          case $variables['ARL_INDUSTRIES_SERVICES']:
+          case $variables['ARL_RESOURCES_MENU_PAGE']:
+          case $variables['ARL_ABOUT_US_MENU_PAGE']:
+            $variables['content_wrapper_class'] = [];
+            break;
+          case $variables['ARL_STAFF']:
+            $variables['show_breadcrumbs'] = TRUE;
+            break;
+        }
+        break;
+      case 'webform':
+      case 'forms':
+      case 'contact':
+        $variables['content_wrapper_class'][] = 'style-a';
+        $variables['title_top'] = FALSE;
+        break;
+      case 'staff':
+        $variables['show_breadcrumbs'] = TRUE;
+        $variables['page']['breadcrumbs']['arl_breadcrumbs'] = [
+          '#type' => 'link',
+          '#title' => t('STAFF'),
+          '#url' => Url::fromRoute('entity.node.canonical', ['node' => $variables['ARL_STAFF']], ['absolute' => TRUE]),
+          '#attributes' => [
+            'class' => 'btn btn-back',
+          ]
+        ];
+        break;
+    }
+
+    $top_fields_value = _arl_get_rows_from_node($node, $top_fields);
+
+    if (!empty($top_fields_value)) {
+      $variables['top_values'] = $top_fields_value;
+    }
+  }
+}
+
+/**
+ * Implements hook_theme_suggestions_page_alter().
+ */
+function arl_theme_suggestions_page_alter(array &$suggestions, array $variables) {
+
+}
+/**
+ * Implements hook_theme_suggestions_file_link_alter().
+ */
+function arl_theme_suggestions_file_link_alter(array &$suggestions, array $variables) {
+}
+
+/**
+ * Implements hook_theme_suggestions_node_alter().
+ */
+function arl_theme_suggestions_node_alter(array &$suggestions, array $variables) {
+  /*$node = $variables['elements']['#node'];
+
+  if ($variables['elements']['#view_mode'] == "full") {
+
+  }*/
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for Block document templates.
+ */
+function arl_preprocess_block(array &$variables) {
+
+  switch ($variables['elements']['#id']) {
+    case 'mainnavigation':
+      break;
+    case 'footer_info':
+      $variables['attributes']['class'][] = 'text';
+      break;
+  }
+}
+
+/**
+ * Implements hook_theme_suggestions_field_alter().
+ */
+function arl_theme_suggestions_field_alter(array &$suggestions, array $vars) {
+  /*$element = $variables['element'];
+  $suggestions[] = 'field__' . $element['#view_mode'];
+  $suggestions[] = 'field__' . $element['#view_mode'] . '__' . $element['#field_name'];*/
+
+  switch ($vars['element']['#field_name']) {
+    case 'field_service_content_title':
+    case 'field_service_content_item':
+    case 'field_articles_group_title':
+    case 'field_forms_files_img_fc_img':
+    case 'field_contact_items_text':
+    case 'field_association_items_link':
+      $suggestions[] = 'field__no_wrappers';
+      break;
+  }
+}
+
+/**
+ * Implements hook_theme_suggestions_field_alter().
+ */
+function arl_theme_suggestions_fieldset_alter(array &$suggestions, array $variables) {
+  /*$element = $variables['element'];
+  if (isset($element['#attributes']['class']) && in_array('form-composite', $element['#attributes']['class'])) {
+    $suggestions[] = 'fieldset__form_composite';
+  }*/
+}
+
+/**
+ * Implements hook_preprocess_node().
+ */
+function arl_preprocess_node(array &$variables) {
+  // Default to turning off byline/submitted.
+  //$variables['display_submitted'] = FALSE;
+
+  /* @var \Drupal\node\Entity\Node $node */
+  $node = $variables['node'];
+
+  hide($variables['content']['field_top_image']);
+
+  switch ($node->bundle()) {
+    case 'homepage':
+      $variables['services'] = views_embed_view('services', 'services_btn');
+      $variables['news'] = views_embed_view('news', 'block');
+      break;
+    case 'news':
+      $variables['read_more_link_node'] = [
+        '#type' => 'link',
+        '#title' => t('Read more'),
+        '#url' => Url::fromRoute('entity.node.canonical', ['node' => $node->id()], ['absolute' => TRUE]),
+        '#attributes' => [
+          'class' => 'btn style-a',
+        ]
+      ];
+      break;
+    case 'service':
+      hide($variables['content']['field_service_icon']);
+      hide($variables['content']['field_service_show_icon']);
+      hide($variables['content']['field_service_menu_files']);
+      break;
+    case 'careers':
+      $list_script_text = $node->get('field_careers_list_script_text')->getValue();
+      $form_script_text = $node->get('field_careers_form_script_text')->getValue();
+
+      $variables['script_list'] = !empty($list_script_text) ?
+        $list_script_text[0]['value'] :
+        '';
+      $variables['script_form'] = !empty($form_script_text) ?
+        $form_script_text[0]['value'] :
+        '';
+      break;
+  }
+}
+
+/**
+ * Implements hook_theme_suggestions_views_view_alter().
+ */
+function arl_theme_suggestions_views_view_alter(array &$suggestions, array $variables) {
+  // kpr($suggestions);
+}
+
+/**
+ * Implements hook_theme_suggestions_views_view_fields_alter().
+ */
+function arl_theme_suggestions_views_view_fields_alter(array &$suggestions, array $variables) {
+
+}
+
+/**
+ * Implements hook_preprocess_form().
+ */
+function arl_preprocess_form(array &$variables) {
+  //$variables['attributes']['novalidate'] = 'novalidate';
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * @param $form
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ * @param $form_id
+ */
+function arl_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  switch ($form_id) {
+    case 'webform_submission_request_a_quote_node_25_add_form':
+      $form['#attributes']['class'][] = 'form';
+      $form['#attributes']['class'][] = 'form-quote';
+      break;
+    case 'search_form':
+      hide($form['help_link']);
+      unset($form['advanced']);
+      $form['basic']['submit']['#prefix'] = '<div class="form-actions">';
+      $form['basic']['submit']['#suffix'] = '</div>';
+      break;
+    case 'search_block_form':
+      $form['keys']['#attributes']['placeholder'] = t('HIT ENTER TO SEARCH');
+      break;
+  }
+}
+
+/**
+ * Implements hook_preprocess_select().
+ */
+function arl_preprocess_select(array &$variables) {
+  //$variables['attributes']['class'][] = 'select-chosen';
+}
+
+/**
+ * Implements hook_preprocess_field().
+ */
+function arl_preprocess_field(array &$variables, $hook) {
+  $disable_quick_edit_field_types = ['image', 'google_map_field', 'link', 'field_collection', 'entity_reference_revisions'];
+
+  if (in_array($variables['field_type'], $disable_quick_edit_field_types)) {
+
+    if (isset($variables['attributes']['data-quickedit-field-id'])) {
+      unset($variables['attributes']['data-quickedit-field-id']);
+    }
+  }
+  if ($variables['field_type'] == 'image') {
+    if (!empty($variables['items'][0]['content']['#item']->entity)) {
+      $variables['image_url'] = $variables['items'][0]['content']['#item']->entity->url();
+    }
+  }
+
+  switch ($variables['element']['#field_name']) {
+    case 'field_news_read_more_link':
+      $variables['items'][0]['content']['#title'] = 'Read more';
+      $variables['items'][0]['content']['#attributes']['class'] = 'btn style-a';
+      break;
+
+    case 'field_home_tabs':
+      $field_array = [
+        'field_home_tabs_small_icon',
+        'field_home_tabs_title',
+      ];
+      $fc_rows = _arl_rows_from_field_collection($variables, $field_array);
+
+      $fc_rows = !empty($fc_rows) ? $fc_rows : array();
+      $list_items = array();
+      foreach ($fc_rows as $key => $row) {
+        $icon = !empty($row['field_home_tabs_small_icon']) ?
+          $row['field_home_tabs_small_icon'] : '';
+        if ($icon) {
+          $icon_url = $icon[0]['#item']->entity->url();
+          if ($icon_url) {
+            $icon = '<span class="ico"><img src="' . $icon_url . '" /></span>';
+          }
+        }
+        $title = $row['field_home_tabs_title'][0]['#context']['value'];
+
+        $list_items[] = [
+          '#markup' => '<a href="#">' . $icon . $title . '</a>'
+        ];
+      }
+      $variables['tabs_list'] = [
+        '#title' => NULL,
+        '#theme' => 'item_list',
+        '#list_type' => 'ul',
+        '#items' => $list_items
+      ];
+
+      break;
+    case 'field_service_content':
+      break;
+    case 'field_service_content_title':
+      $variables['prefix'] = '<h2>';
+      $variables['suffix'] = '</h2>';
+      break;
+    case 'field_articles_group_title':
+      $variables['prefix'] = '<h2>';
+      $variables['suffix'] = '</h2>';
+      break;
+    case 'field_forms_files_img_fc_img':
+      if (!empty($variables['items'])) {
+        $variables['items'][0]['content']['#item_attributes'] = array('class' => array('file-icon'));
+      }
+      break;
+    case 'field_contact_text':
+      $variables['attributes']['class'][] = 'text';
+      break;
+    case 'field_contact_logo':
+      $variables['attributes']['class'][] = 'logo';
+      break;
+    case 'field_contact_items':
+      $variables['attributes']['class'][] = 'b-contact';
+      $items = !empty($variables['items']) ? $variables['items'] : array();
+      foreach ($items as $key => $item) {
+        $variables['items'][$key]['attributes']->setAttribute('class', 'item');
+      }
+      break;
+    case 'field_contact_items_social_fb':
+      $variables['attributes']['class'][] = 'social-item ss-icon ss-social-regular ss-facebook';
+      break;
+    case 'field_contact_items_social_link':
+      $variables['attributes']['class'][] = 'social-item ss-icon ss-social-regular ss-linkedin';
+      break;
+    case 'field_contact_items_icon':
+      $variables['attributes']['class'][] = 'ico';
+      break;
+    case 'field_page_files':
+      /* @var Entity\File $file */
+      $file = $variables['items'][0]['content']['#file'];
+      $variables['rendered_file'] = [
+        '#markup' => '<a href="'. $file->url() .'" target="_blank">'
+          . '<span class="ico"></span>'
+          . $file->label()
+          . '</a>'
+      ];
+      break;
+    case 'field_files':
+      foreach ($variables['items'] as &$item) {
+        $item['content']['#theme'] = 'arl_custom_link';
+      }
+      break;
+  }
+}
+
+
+/**
+ * Creates a simple text rows array from a field collections, to be used in a
+ * field_preprocess function.
+ *
+ * @param $vars
+ * An array of variables to pass to the theme template.
+ * @param $field_array
+ * Array of fields to be turned into rows in the field collection.
+ * @return array
+ */
+function _arl_rows_from_field_collection(&$vars, $field_array) {
+  $rows = [];
+
+  if (isset($vars['element']['#items'])) {
+    $items = $vars['element']['#items'];
+  }
+  elseif (isset($vars['#items'])) {
+    $items = $vars['#items'];
+  }
+  else {
+    $items = array();
+  }
+
+//  dump($items->getValue());
+
+  foreach ($items->getValue() as $key => $item) {
+//    $entity_id = $item['value'];
+//    $entity = paragraph_item_load($entity_id);
+    $entity = Paragraph::load($item['target_id']);
+//    dump($entity->get(''));
+
+      foreach ($field_array as $field) {
+//        if (array_key_exists($field, $properties)) {
+        // dump($entity->$field);
+        // dump($entity->$field->view());
+        $row[$field] = $entity->$field->view();
+//        }
+      }
+
+      $rows[] = $row;
+//    try {
+//      $wrapper = entity_metadata_wrapper('field_collection_item', $entity);
+//      $row = array();
+//      $properties = $wrapper->getPropertyInfo();
+//
+//      foreach ($field_array as $field) {
+//        if (array_key_exists($field, $properties)) {
+//          $row[$field] = $wrapper->$field->value();
+//        }
+//      }
+//      $rows[] = $row;
+//    }
+//    catch (EntityMetadataWrapperException $exc) {
+//      watchdog('arl', 'See ' . __FUNCTION__ . '() <pre>' . $exc->getTraceAsString() . '</pre>', NULL, WATCHDOG_ERROR);
+//    }
+  }
+
+  return $rows;
+}
+
+/**
+ * Get rows from node.
+ *
+ * @param $node
+ * @param $field_array
+ * @return array|void
+ */
+function _arl_get_rows_from_node(\Drupal\node\Entity\Node $node, $field_array) {
+
+  if (!is_object($node)) {
+    return;
+  }
+  $row = array();
+
+  try {
+    foreach ($field_array as $field_name) {
+      if ($node->hasField($field_name)) {
+        $field = $node->get($field_name);
+        $field_type = $field->getFieldDefinition()->getType();
+
+        switch ($field_type) {
+          case 'image':
+            $image = $field->get(0);
+            if (isset($image->entity)) {
+              $img_url = $image->entity->url();
+              $row[$field_name] = $img_url;
+            }
+            break;
+          default:
+            $field_value = $field->get(0)->getValue();
+            $row[$field_name] = !empty($field_value['value']) ? $field_value['value'] : '';
+        }
+      }
+    }
+  }
+  catch (Exception $exc) {
+    \Drupal::logger('arl')->error('See ' . __FUNCTION__ . '() <pre>' . $exc->getTraceAsString() . '</pre>');
+  }
+
+  return $row;
+}
+
+/**
+ * Implements hook_preprocess_details().
+ */
+function arl_preprocess_details(array &$variables) {
+  /*$variables['attributes']['class'][] = 'details';
+  $variables['summary_attributes']['class'] = 'summary';*/
+}
+
+/**
+ * Implements hook_preprocess_views_view_list().
+ */
+function arl_preprocess_views_view_list(array &$variables) {
+}
+
+/**
+ * Implements hook_theme_suggestions_details_alter().
+ */
+function arl_theme_suggestions_details_alter(array &$suggestions, array $variables) {
+
+}
+
+/**
+ * Implements hook_preprocess_menu_local_task().
+ */
+function arl_preprocess_menu_local_task(array &$variables) {
+  //$variables['element']['#link']['url']->setOption('attributes', ['class'=>'rounded']);
+}
+
+/**
+ * Implements hook_block_view_alter().
+ * @param $build
+ * @param $block
+ */
+function arl_block_view_alter(array &$build, BlockPluginInterface $block) {
+}
+
+/**
+ * Implements hook_preprocess_menu().
+ */
+function arl_preprocess_menu__main(array &$variables) {
+  foreach ($variables['items'] as &$item) {
+    switch ($item['title']) {
+      case 'Laboratory Services':
+        foreach ($item['below'] as &$subitem) {
+          $subitem['view'] = views_embed_view('services', 'menu_services');
+        }
+        break;
+      case 'Industries':
+        foreach ($item['below'] as &$subitem) {
+          $subitem['view'] = views_embed_view('services', 'menu_industries');
+        }
+        break;
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess_paragraph().
+ */
+function arl_preprocess_paragraph(array &$vars) {
+  $paragraph = $vars['paragraph'];
+  $parent_field_name = $paragraph->parent_field_name->getString();
+  $parent_field_delta = $paragraph->_referringItem->getName();
+  $bundle = $paragraph->bundle();
+
+  switch($parent_field_name) {
+  }
+
+  switch($bundle) {
+    case 'field_forms_files_field_coll':
+      if (!empty($vars['content']['field_forms_file']) &&
+        !empty($vars['content']['field_forms_file']['#items'])) {
+        $items = $vars['content']['field_forms_file']['#items'];
+        $item = !empty($items) ? $items->getValue() : '';
+
+        if (!empty($item[0]) && !empty($item[0]['target_id'])) {
+          $file = \Drupal\file\Entity\File::load($item[0]['target_id']);
+          $uri = $file->getFileUri();
+          $name = $file->getFilename();
+          $vars['file_url'] = file_create_url($uri);
+          $vars['file_name'] = !empty($item[0]['description']) ? $item[0]['description'] : $name;
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * Returns HTML for a breadcrumb trail.
+ *
+ * @param $variables
+ *   An associative array containing:
+ *   - breadcrumb: An array containing the breadcrumb links.
+ */
+function arl_breadcrumb($variables) {
+  $links = $variables['links'];
+
+  if (!empty($links)) {
+    // Provide a navigational heading to give context for breadcrumb links to
+    // screen-reader users. Make the heading invisible with .element-invisible.
+    $output = '<h2 class="element-invisible">' . t('You are here') . '</h2>';
+    $classes[] = 'inline';
+
+    $rendered_links = [];
+
+    /* @var \Drupal\Core\Link $v */
+    foreach ($links as $k => $v) {
+      if ($k == (count($links) - 1)) {
+        $classes[] = 'last';
+      }
+
+      $link_array = $v->toRenderable();
+      $link = render($link_array);
+      $rendered_links[$k] = '<span class="' . implode(' ', $classes) . '">' . $link . '</span>';
+    }
+
+    $output .= '<div class="breadcrumb">' . implode(' <span class="delimiter">»</span> ', $rendered_links) . '</div>';
+
+    return $output;
+  }
+}

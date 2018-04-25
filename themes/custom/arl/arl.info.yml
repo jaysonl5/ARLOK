@@ -1,0 +1,27 @@
+name: ARL
+type: theme
+description: 'ARL custom theme'
+package: Other
+core: 8.x
+libraries:
+  - arl/global-styling
+ 
+base theme: classy
+#Using Classy as a base theme https://www.drupal.org/theme-guide/8/classy
+
+regions:
+  header_menu: Header menu
+  search_form: Search form
+  tabs: Tabs
+  breadcrumbs: Breadcrumbs
+  header: Header
+  messages: Messages
+  views_area: Views area
+  content_top: Content top
+  additional_nav: Additional navigation
+  content: Content
+  content_sidebar: Content sidebar
+  content_bottom: Content bottom
+  footer_top: Footer top
+  footer: Footer
+  footer_bottom: Footer bottom

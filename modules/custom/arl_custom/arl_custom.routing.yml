@@ -1,0 +1,18 @@
+arl_custom.admin:
+  path: '/admin/config/arl'
+  defaults:
+    _controller: '\Drupal\arl_custom\Controller\MainController::mainPage'
+    _title: 'ARL config'
+  requirements:
+    _permission: 'administer site configuration'
+
+book.settings:
+  path: '/admin/config/arl/settings'
+  defaults:
+    _form: '\Drupal\arl_custom\Form\SettingsForm'
+    _title: 'Settings'
+  requirements:
+    _permission: 'administer site configuration'
+
+route_callbacks:
+  - '\Drupal\arl_custom\Routing\ArlCustomRoutes::routes'

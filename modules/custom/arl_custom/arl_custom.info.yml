@@ -1,0 +1,5 @@
+name: 'ARL custom'
+type: module
+description: 'ARL custom module'
+core: 8.x
+package: 'Custom'

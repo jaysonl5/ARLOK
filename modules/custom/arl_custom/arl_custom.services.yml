@@ -1,0 +1,5 @@
+services:
+  cdi_custom.route_subscriber:
+    class: Drupal\arl_custom\Routing\ArlCustomRoutes
+    tags:
+      - { name: event_subscriber }
